@@ -1,0 +1,107 @@
+.presentation-timer {
+  background-color: var(--color-surface-cream);
+  border: 1.5px solid var(--color-border-cream);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  box-shadow: var(--shadow-clay-card);
+}
+
+.presentation-timer__header {
+  margin-bottom: var(--space-4);
+}
+
+.presentation-timer__title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-main);
+  font-weight: var(--font-weight-bold);
+}
+
+.presentation-timer__subtitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.presentation-timer__durations {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+.presentation-timer__duration-btn {
+  padding: 10px 14px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-border-subtle);
+  background-color: var(--color-surface-white);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+  text-align: center;
+  cursor: pointer;
+}
+
+.presentation-timer__duration-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-deep);
+  background-color: var(--color-surface-hover);
+}
+
+.presentation-timer__duration-btn--active {
+  border-color: var(--color-primary);
+  background: linear-gradient(180deg, #A082D6 0%, #835EBE 100%);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-clay-button);
+}
+
+.presentation-timer__display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-4);
+  background-color: #F8F1FD;
+  border: 1.5px solid #E6D8F4;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
+  box-shadow: var(--shadow-clay-input);
+}
+
+.presentation-timer__clock {
+  font-family: var(--font-family-mono);
+  font-size: 3.5rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-deep);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.presentation-timer__status {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--space-3);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.presentation-timer__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .presentation-timer {
+    padding: var(--space-6) var(--space-4);
+  }
+  .presentation-timer__clock {
+    font-size: 2.75rem;
+  }
+}

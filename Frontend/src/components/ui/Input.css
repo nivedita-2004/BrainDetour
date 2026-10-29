@@ -1,0 +1,128 @@
+.ui-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.ui-input-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-main);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.ui-input-required {
+  color: #B93859;
+  font-weight: var(--font-weight-bold);
+}
+
+.ui-input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.ui-input-icon {
+  position: absolute;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+  font-size: 1rem;
+}
+
+.ui-input-right-slot {
+  position: absolute;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ui-input-toggle-btn {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition-fast);
+}
+
+.ui-input-toggle-btn:hover {
+  color: var(--color-primary-deep);
+}
+
+.ui-input-field {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-main);
+  background-color: var(--color-surface-white);
+  border: 1.5px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-clay-input);
+  transition: all var(--transition-fast);
+}
+
+.ui-input-field::placeholder {
+  color: var(--color-text-muted);
+}
+
+.ui-input-field--with-icon {
+  padding-left: 42px;
+}
+
+.ui-input-field--with-right {
+  padding-right: 44px;
+}
+
+.ui-input-field:hover:not(:disabled) {
+  border-color: #CBB4E5;
+}
+
+.ui-input-field:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-white);
+  box-shadow: 0 0 0 3px rgba(146, 112, 200, 0.18), inset 0 1px 2px rgba(114, 83, 168, 0.04);
+}
+
+.ui-input-field--error {
+  border-color: #E88EA2;
+}
+
+.ui-input-field--error:focus {
+  border-color: #C0395D;
+  box-shadow: 0 0 0 3px rgba(242, 184, 200, 0.35);
+}
+
+.ui-input-field--disabled {
+  background-color: #F7F1FB;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.ui-input-error {
+  font-size: var(--font-size-xs);
+  color: #B93859;
+  font-weight: var(--font-weight-medium);
+  margin-top: 2px;
+}
+
+.ui-input-helper {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-top: 1px;
+}

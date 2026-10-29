@@ -1,0 +1,117 @@
+.ui-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-family-sans);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  letter-spacing: -0.01em;
+}
+
+/* Sizes */
+.ui-button--sm {
+  font-size: var(--font-size-xs);
+  padding: 6px 14px;
+  height: 36px;
+  gap: var(--space-2);
+}
+
+.ui-button--md {
+  font-size: var(--font-size-sm);
+  padding: 10px 22px;
+  height: 44px;
+  gap: var(--space-2);
+}
+
+.ui-button--lg {
+  font-size: var(--font-size-base);
+  padding: 14px 28px;
+  height: 52px;
+  gap: var(--space-3);
+}
+
+/* Primary: 3D Soft Clay Gradient with Layered Diffuse Glow */
+.ui-button--primary {
+  background: linear-gradient(180deg, #A082D6 0%, #835EBE 100%);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-clay-button);
+  border-top-color: rgba(255, 255, 255, 0.35);
+  border-bottom-color: rgba(0, 0, 0, 0.15);
+}
+
+.ui-button--primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #A88BDC 0%, #8C65C7 100%);
+  box-shadow: var(--shadow-clay-button-hover);
+  transform: translateY(-2px);
+}
+
+.ui-button--primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px -1px rgba(110, 75, 168, 0.30), inset 0 2px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* Secondary: Cream Pill with Subtle Depth */
+.ui-button--secondary {
+  background-color: var(--color-surface-cream);
+  color: var(--color-primary-deep);
+  border: 1.5px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-clay-subtle);
+}
+
+.ui-button--secondary:hover:not(:disabled) {
+  background-color: var(--color-surface-white);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-clay-card);
+}
+
+.ui-button--secondary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Outline: Warm Ivory with Plum Border */
+.ui-button--outline {
+  background-color: var(--color-surface-cream);
+  color: var(--color-text-main);
+  border: 1.5px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-clay-subtle);
+}
+
+.ui-button--outline:hover:not(:disabled) {
+  background-color: var(--color-surface-white);
+  border-color: var(--color-primary);
+  color: var(--color-primary-deep);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-clay-card);
+}
+
+.ui-button--outline:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Ghost: Seamless with Soft Hover Pill */
+.ui-button--ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+}
+
+.ui-button--ghost:hover:not(:disabled) {
+  background-color: rgba(255, 248, 240, 0.7);
+  color: var(--color-primary-deep);
+}
+
+/* Disabled */
+.ui-button--disabled,
+.ui-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
