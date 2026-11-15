@@ -7,10 +7,11 @@ import './Pages.css'
 
 export function BlogPage() {
   usePageTitle('The Detour Journal — Essays & Insights')
-  const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [posts, setPosts] = useState(() => mockBlogService.getCachedBlogPosts())
+  const [loading, setLoading] = useState(() => mockBlogService.getCachedBlogPosts().length === 0)
 
   useEffect(() => {
+    if (posts.length > 0) return undefined
     let isMounted = true
     mockBlogService.getBlogPosts().then((data) => {
       if (isMounted) {
@@ -21,7 +22,7 @@ export function BlogPage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [posts.length])
 
   return (
     <div className="blog-page">

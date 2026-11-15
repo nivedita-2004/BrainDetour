@@ -87,6 +87,24 @@ export function LoginPage() {
           </span>
         }
       >
+        {location.state?.resetSuccessMessage && !error && (
+          <div
+            role="status"
+            style={{
+              padding: '8px 12px',
+              backgroundColor: 'var(--color-status-supported-bg)',
+              border: '1px solid var(--color-status-supported-border)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: 'var(--font-size-xs)',
+              color: 'var(--color-status-supported-text)',
+              marginBottom: 'var(--space-3)',
+              fontWeight: 'var(--font-weight-medium)',
+            }}
+          >
+            ✓ {location.state.resetSuccessMessage}
+          </div>
+        )}
+
         {location.state?.from && (
           <div
             style={{
@@ -144,13 +162,17 @@ export function LoginPage() {
           />
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-2px' }}>
-            <a
-              href="#forgot"
-              onClick={(e) => e.preventDefault()}
-              style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary-deep)' }}
+            <Link
+              to="/forgot-password"
+              state={{ email: email.trim() || undefined, from: location.state?.from }}
+              style={{
+                fontSize: 'var(--font-size-xs)',
+                color: 'var(--color-primary-deep)',
+                fontWeight: 'var(--font-weight-medium)',
+              }}
             >
               Forgot password?
-            </a>
+            </Link>
           </div>
 
           <Button

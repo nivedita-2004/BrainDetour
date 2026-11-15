@@ -5,16 +5,36 @@
  * Designed to be replaced with a live headless CMS or REST/GraphQL endpoint.
  */
 
-import { MOCK_BLOG_POSTS } from '../../data/mock/blogPosts'
+import { MOCK_BLOG_POSTS } from '../../data/mock/blogPosts.js'
+
+let cachedPosts = [...MOCK_BLOG_POSTS]
 
 export const mockBlogService = {
+  /**
+   * Synchronously returns available cached blog posts to prevent route transition flashes.
+   * @returns {Array<typeof MOCK_BLOG_POSTS[0]>}
+   */
+  getCachedBlogPosts() {
+    return cachedPosts
+  },
+
+  /**
+   * Synchronously returns a cached blog post by slug if available.
+   * @param {string} slug
+   * @returns {typeof MOCK_BLOG_POSTS[0] | null}
+   */
+  getCachedBlogPostBySlug(slug) {
+    if (!slug) return null
+    return cachedPosts.find((p) => p.slug === slug) || null
+  },
+
   /**
    * Retrieves all published blog posts.
    * @returns {Promise<Array<typeof MOCK_BLOG_POSTS[0]>>}
    */
   async getBlogPosts() {
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    return [...MOCK_BLOG_POSTS]
+    cachedPosts = [...MOCK_BLOG_POSTS]
+    return cachedPosts
   },
 
   /**
@@ -23,8 +43,7 @@ export const mockBlogService = {
    * @returns {Promise<typeof MOCK_BLOG_POSTS[0] | null>}
    */
   async getBlogPostBySlug(slug) {
-    await new Promise((resolve) => setTimeout(resolve, 150))
-    const post = MOCK_BLOG_POSTS.find((p) => p.slug === slug)
+    const post = cachedPosts.find((p) => p.slug === slug)
     return post || null
   },
 }

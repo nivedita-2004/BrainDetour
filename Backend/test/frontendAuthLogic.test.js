@@ -1,5 +1,7 @@
 const { test, describe } = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // Exact normalizeBaseUrl algorithm from Frontend/src/services/api.js
 function normalizeBaseUrl(url) {
@@ -262,5 +264,29 @@ describe('Phase 4: Frontend Authentication State & Sequencing Logic', () => {
     // When loaded & authenticated:
     assert.strictEqual(renderNavbarAuthDesktop({ loading: false, isAuthenticated: true, user: { name: 'Verified' } }), 'ProfileMenu(Verified)');
     assert.strictEqual(evaluateProtectedRoute({ loading: false, isAuthenticated: true }), 'RENDER_PROTECTED_CONTENT');
+  });
+
+  // 11. Mobile navigation menu behavior and responsive dropdown design contract
+  test('Navbar mobile navigation implements compact dropdown, backdrop, outside-click, Escape, scroll lock, and active route highlight', () => {
+    const navbarJsxPath = path.join(__dirname, '..', '..', 'Frontend', 'src', 'components', 'layout', 'Navbar.jsx');
+    const navbarCssPath = path.join(__dirname, '..', '..', 'Frontend', 'src', 'components', 'layout', 'Navbar.css');
+    const navbarJsx = fs.readFileSync(navbarJsxPath, 'utf8');
+    const navbarCss = fs.readFileSync(navbarCssPath, 'utf8');
+
+    // Verify backdrop & compact dropdown panel markup
+    assert.ok(navbarJsx.includes('app-navbar__mobile-backdrop'), 'Navbar must render a mobile backdrop');
+    assert.ok(navbarJsx.includes('app-navbar__mobile-drawer--open'), 'Navbar must toggle open class for smooth transitions');
+
+    // Verify Escape key, outside click/tap, resize, and scroll lock handlers
+    assert.ok(navbarJsx.includes("event.key === 'Escape'"), 'Navbar must close mobile menu on Escape key');
+    assert.ok(navbarJsx.includes("document.addEventListener('mousedown', handlePointerOutside)"), 'Navbar must close mobile menu on outside mouse click');
+    assert.ok(navbarJsx.includes("document.addEventListener('touchstart', handlePointerOutside"), 'Navbar must close mobile menu on outside touch tap');
+    assert.ok(navbarJsx.includes("document.body.style.overflow = 'hidden'"), 'Navbar must prevent background scroll while mobile menu is open');
+    assert.ok(navbarJsx.includes('menuState.isOpen && menuState.pathname === location.pathname'), 'Navbar must automatically close mobile menu when route changes');
+
+    // Verify CSS compact panel dimensions, rounded corners, backdrop blur, and touch targets
+    assert.ok(navbarCss.includes('width: min(276px, calc(100vw - 28px))'), 'Mobile drawer must have compact mobile width instead of full-screen overlay');
+    assert.ok(navbarCss.includes('min-height: 44px'), 'Mobile navigation links must have >= 44px touch targets');
+    assert.ok(navbarCss.includes('.app-navbar__mobile-link--active'), 'Mobile navigation must highlight the active route');
   });
 });

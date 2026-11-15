@@ -36,6 +36,9 @@ export const SUPPORT_EMAIL = 'braindetour2026@gmail.com'
 export const AUTH_LINKS = {
   login: { label: 'Log In', path: '/login' },
   signup: { label: 'Sign Up', path: '/signup' },
+  forgotPassword: { label: 'Forgot Password', path: '/forgot-password' },
+  verifyResetOtp: { label: 'Verify Reset Code', path: '/verify-reset-otp' },
+  resetPassword: { label: 'Reset Password', path: '/reset-password' },
 }
 
 /**

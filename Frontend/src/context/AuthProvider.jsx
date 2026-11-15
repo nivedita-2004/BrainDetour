@@ -234,6 +234,58 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const forgotPassword = async (email) => {
+    try {
+      const res = await api.post('/auth/forgot-password', { email })
+      const data = res.data || {}
+      if (!data.success) {
+        throw new Error(data.message || 'Unable to request password reset code')
+      }
+      return data
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || 'Unable to request password reset code'
+      const error = new Error(message)
+      if (err.response?.data?.retryAfterSeconds) {
+        error.retryAfterSeconds = err.response.data.retryAfterSeconds
+      }
+      throw error
+    }
+  }
+
+  const verifyResetOtp = async (email, otp) => {
+    try {
+      const res = await api.post('/auth/verify-reset-otp', { email, otp })
+      const data = res.data || {}
+      if (!data.success || !data.resetToken) {
+        throw new Error(data.message || 'Invalid or expired verification code')
+      }
+      return data
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || 'Invalid or expired verification code'
+      throw new Error(message)
+    }
+  }
+
+  const resetPassword = async ({ resetToken, newPassword, email }) => {
+    try {
+      const res = await api.post('/auth/reset-password', {
+        resetToken,
+        newPassword,
+        ...(email ? { email } : {}),
+      })
+      const data = res.data || {}
+      if (!data.success) {
+        throw new Error(data.message || 'Unable to reset password')
+      }
+      return data
+    } catch (err) {
+      const message = err.response?.data?.message || err.message || 'Unable to reset password'
+      throw new Error(message)
+    }
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -243,6 +295,9 @@ export function AuthProvider({ children }) {
         login,
         signup,
         logout,
+        forgotPassword,
+        verifyResetOtp,
+        resetPassword,
       }}
     >
       {children}

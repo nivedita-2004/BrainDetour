@@ -264,14 +264,20 @@
   justify-content: center;
   align-items: center;
   gap: 4px;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
   padding: 0;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.app-navbar__mobile-toggle:hover,
+.app-navbar__mobile-toggle--open {
+  background-color: rgba(146, 112, 200, 0.12);
+  border-color: rgba(146, 112, 200, 0.22);
 }
 
 .app-navbar__burger-bar {
@@ -280,7 +286,7 @@
   height: 2px;
   background-color: var(--color-text-main);
   border-radius: 2px;
-  transition: all var(--transition-fast);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease;
 }
 
 .app-navbar__mobile-toggle--open .app-navbar__burger-bar:nth-child(1) {
@@ -289,30 +295,95 @@
 
 .app-navbar__mobile-toggle--open .app-navbar__burger-bar:nth-child(2) {
   opacity: 0;
+  transform: scaleX(0.4);
 }
 
 .app-navbar__mobile-toggle--open .app-navbar__burger-bar:nth-child(3) {
   transform: translateY(-6px) rotate(-45deg);
 }
 
-/* Mobile Drawer Menu */
-.app-navbar__mobile-drawer {
-  position: absolute;
-  top: 100%;
+/* Dimmed / Blurred Backdrop Behind Mobile Menu */
+.app-navbar__mobile-backdrop {
+  position: fixed;
+  top: 60px;
   left: 0;
   right: 0;
-  background-color: rgba(237, 227, 248, 0.96);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(146, 112, 200, 0.2);
-  padding: var(--space-4) var(--space-6);
-  box-shadow: 0 12px 28px rgba(114, 83, 168, 0.15);
-  animation: mobileDrawerSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  bottom: 0;
+  height: calc(100dvh - 60px);
+  background-color: rgba(34, 22, 56, 0.24);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 48;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.2s;
+}
+
+[data-theme="dark"] .app-navbar__mobile-backdrop {
+  background-color: rgba(8, 5, 16, 0.52);
+}
+
+.app-navbar__mobile-backdrop--open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0s;
+}
+
+/* Compact Floating Mobile Dropdown Panel */
+.app-navbar__mobile-drawer {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: var(--space-4);
+  width: min(276px, calc(100vw - 28px));
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--color-surface-cream);
+  border: 1px solid rgba(146, 112, 200, 0.26);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  box-shadow:
+    0 18px 38px -8px rgba(84, 54, 136, 0.24),
+    0 6px 16px -4px rgba(84, 54, 136, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  z-index: 60;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-8px) scale(0.96);
+  transform-origin: top right;
+  transition:
+    opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0.18s;
 }
 
 [data-theme="dark"] .app-navbar__mobile-drawer {
-  background-color: rgba(26, 20, 38, 0.96);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+  background-color: rgba(34, 25, 50, 0.98);
+  border-color: rgba(167, 133, 220, 0.24);
+  box-shadow:
+    0 20px 42px -8px rgba(0, 0, 0, 0.65),
+    0 6px 16px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.app-navbar__mobile-drawer--open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition:
+    opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0s linear 0s;
 }
 
 @keyframes mobileDrawerSlideDown {
@@ -332,33 +403,145 @@
   gap: 4px;
 }
 
+.app-navbar__mobile-section-label {
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  padding: 2px 10px 4px;
+}
+
 .app-navbar__mobile-link {
-  font-size: var(--font-size-base);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-main);
   text-decoration: none;
   padding: 10px 12px;
   border-radius: var(--radius-md);
-  transition: all var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.app-navbar__mobile-link:hover,
+.app-navbar__mobile-link:hover {
+  background-color: rgba(146, 112, 200, 0.1);
+  color: var(--color-primary-deep);
+}
+
 .app-navbar__mobile-link--active {
-  background-color: rgba(146, 112, 200, 0.12);
+  background-color: rgba(146, 112, 200, 0.16);
   color: var(--color-primary-deep);
   font-weight: var(--font-weight-semibold);
 }
 
+[data-theme="dark"] .app-navbar__mobile-link--active {
+  background-color: rgba(167, 133, 220, 0.18);
+  color: var(--color-primary-deep);
+}
+
+.app-navbar__mobile-link-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background-color: transparent;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.app-navbar__mobile-link--active .app-navbar__mobile-link-indicator {
+  background-color: var(--color-primary);
+  transform: scale(1.1);
+}
+
 .app-navbar__mobile-divider {
   height: 1px;
-  background-color: rgba(146, 112, 200, 0.15);
-  margin: 8px 0;
+  background-color: rgba(146, 112, 200, 0.16);
+  margin: 6px 4px;
 }
 
 .app-navbar__mobile-auth {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.app-navbar__mobile-account {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app-navbar__mobile-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background-color: rgba(146, 112, 200, 0.08);
+  border: 1px solid rgba(146, 112, 200, 0.14);
+}
+
+[data-theme="dark"] .app-navbar__mobile-user {
+  background-color: rgba(167, 133, 220, 0.08);
+  border-color: rgba(167, 133, 220, 0.14);
+}
+
+.app-navbar__mobile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #9270C8, #7253A8);
+  color: #FFFFFF;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  box-shadow: 0 2px 6px rgba(114, 83, 168, 0.22);
+  overflow: hidden;
+}
+
+.app-navbar__mobile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-navbar__mobile-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-navbar__mobile-user-name {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-main);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-navbar__mobile-user-email {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-navbar__mobile-guest-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .app-navbar__mobile-auth-link {
@@ -368,6 +551,13 @@
 
 .w-full {
   width: 100%;
+}
+
+@media (min-width: 861px) {
+  .app-navbar__mobile-backdrop,
+  .app-navbar__mobile-drawer {
+    display: none;
+  }
 }
 
 @media (max-width: 860px) {
@@ -382,5 +572,12 @@
   }
   .app-navbar__mobile-toggle {
     display: flex;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-navbar__mobile-drawer {
+    right: 12px;
+    width: calc(100vw - 24px);
   }
 }

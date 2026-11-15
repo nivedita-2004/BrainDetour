@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { NavLink, Link } from 'react-router-dom'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { NavLink, Link, useLocation } from 'react-router-dom'
 import './Navbar.css'
 import { NAV_LINKS, AUTH_LINKS, APP_CONFIG } from '../../lib/constants'
 import { useTheme } from '../../hooks/useTheme'
@@ -7,15 +7,98 @@ import { useAuth } from '../../hooks/useAuth'
 import { ProfileMenu } from './ProfileMenu'
 import { Button } from '../ui/Button'
 
+function getMobileUserInitial(name, email) {
+  if (name && name.trim()) {
+    const parts = name.trim().split(/\s+/)
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase()
+    }
+    return parts[0][0].toUpperCase()
+  }
+  if (email && email.trim()) {
+    return email.trim().charAt(0).toUpperCase()
+  }
+  return 'S'
+}
 
 export function Navbar() {
   const { theme, toggleTheme } = useTheme()
   const { user, isAuthenticated, loading, logout } = useAuth()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const location = useLocation()
+  const [menuState, setMenuState] = useState({ isOpen: false, pathname: location.pathname })
+  const drawerRef = useRef(null)
+  const toggleBtnRef = useRef(null)
+
+  const mobileMenuOpen = menuState.isOpen && menuState.pathname === location.pathname
+
+  const closeMobileMenu = useCallback(() => {
+    setMenuState((prev) => (prev.isOpen ? { ...prev, isOpen: false } : prev))
+  }, [])
+
+  const toggleMobileMenu = () => {
+    setMenuState((prev) => {
+      const currentlyOpen = prev.isOpen && prev.pathname === location.pathname
+      return {
+        isOpen: !currentlyOpen,
+        pathname: location.pathname,
+      }
+    })
+  }
 
   const handleLinkClick = () => {
-    setMobileMenuOpen(false)
+    closeMobileMenu()
   }
+
+  // Close on Escape key, outside click/tap, and desktop resize; lock background scroll while open
+  useEffect(() => {
+    if (!mobileMenuOpen) {
+      document.body.style.overflow = ''
+      return undefined
+    }
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        closeMobileMenu()
+        toggleBtnRef.current?.focus()
+      }
+    }
+
+    function handlePointerOutside(event) {
+      const target = event.target
+      if (
+        drawerRef.current &&
+        !drawerRef.current.contains(target) &&
+        toggleBtnRef.current &&
+        !toggleBtnRef.current.contains(target)
+      ) {
+        closeMobileMenu()
+      }
+    }
+
+    function handleResize() {
+      if (window.innerWidth > 860) {
+        closeMobileMenu()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('mousedown', handlePointerOutside)
+    document.addEventListener('touchstart', handlePointerOutside, { passive: true })
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('mousedown', handlePointerOutside)
+      document.removeEventListener('touchstart', handlePointerOutside)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [mobileMenuOpen, closeMobileMenu])
+
+  const userInitial = getMobileUserInitial(user?.name, user?.email)
 
   return (
     <header className="app-navbar">
@@ -89,11 +172,13 @@ export function Navbar() {
 
           {/* Mobile Menu Hamburger Button */}
           <button
+            ref={toggleBtnRef}
             type="button"
             className={`app-navbar__mobile-toggle ${mobileMenuOpen ? 'app-navbar__mobile-toggle--open' : ''}`}
-            onClick={() => setMobileMenuOpen((prev) => !prev)}
-            aria-label="Toggle navigation menu"
+            onClick={toggleMobileMenu}
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Toggle navigation menu'}
             aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-navigation-panel"
           >
             <span className="app-navbar__burger-bar" />
             <span className="app-navbar__burger-bar" />
@@ -102,62 +187,100 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Responsive Mobile Drawer Menu */}
-      {mobileMenuOpen && (
-        <div className="app-navbar__mobile-drawer" role="dialog" aria-modal="true" aria-label="Mobile Navigation">
-          <nav className="app-navbar__mobile-nav">
-            {NAV_LINKS.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.path === '/'}
-                onClick={handleLinkClick}
-                className={({ isActive }) =>
-                  `app-navbar__mobile-link ${isActive ? 'app-navbar__mobile-link--active' : ''}`
-                }
-              >
-                {item.label}
-              </NavLink>
-            ))}
-            <div className="app-navbar__mobile-divider" />
-            <div className="app-navbar__mobile-auth">
-              {!loading && (
-                isAuthenticated ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ padding: '6px 12px', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-                      Signed in as <strong>{user?.name || user?.email}</strong>
+      {/* Dimmed / Blurred Mobile Backdrop */}
+      <div
+        className={`app-navbar__mobile-backdrop ${mobileMenuOpen ? 'app-navbar__mobile-backdrop--open' : ''}`}
+        onClick={closeMobileMenu}
+        aria-hidden="true"
+      />
+
+      {/* Compact Responsive Mobile Dropdown Panel */}
+      <div
+        id="mobile-navigation-panel"
+        ref={drawerRef}
+        className={`app-navbar__mobile-drawer ${mobileMenuOpen ? 'app-navbar__mobile-drawer--open' : ''}`}
+        role="dialog"
+        aria-modal={mobileMenuOpen ? 'true' : undefined}
+        aria-label="Mobile Navigation"
+        aria-hidden={!mobileMenuOpen}
+        inert={!mobileMenuOpen ? true : undefined}
+      >
+        <nav className="app-navbar__mobile-nav" aria-label="Mobile Navigation Links">
+          <div className="app-navbar__mobile-section-label">Navigation</div>
+          {NAV_LINKS.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              onClick={handleLinkClick}
+              className={({ isActive }) =>
+                `app-navbar__mobile-link ${isActive ? 'app-navbar__mobile-link--active' : ''}`
+              }
+            >
+              <span className="app-navbar__mobile-link-text">{item.label}</span>
+              <span className="app-navbar__mobile-link-indicator" aria-hidden="true" />
+            </NavLink>
+          ))}
+
+          <div className="app-navbar__mobile-divider" />
+
+          <div className="app-navbar__mobile-auth">
+            {!loading && (
+              isAuthenticated ? (
+                <div className="app-navbar__mobile-account">
+                  <div className="app-navbar__mobile-user">
+                    <span className="app-navbar__mobile-avatar" aria-hidden="true">
+                      {user?.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt={user.name || 'Scholar Avatar'}
+                          className="app-navbar__mobile-avatar-img"
+                        />
+                      ) : (
+                        userInitial
+                      )}
+                    </span>
+                    <div className="app-navbar__mobile-user-info">
+                      <span className="app-navbar__mobile-user-name">
+                        {user?.name || 'Scholar'}
+                      </span>
+                      {user?.email && (
+                        <span className="app-navbar__mobile-user-email">
+                          {user.email}
+                        </span>
+                      )}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={async () => {
-                        handleLinkClick()
-                        await logout()
-                      }}
-                    >
-                      Log Out
-                    </Button>
                   </div>
-                ) : (
-                  <>
-                    <Link to={AUTH_LINKS.login.path} onClick={handleLinkClick} className="app-navbar__mobile-auth-link">
-                      <Button variant="primary" size="sm" className="w-full">
-                        {AUTH_LINKS.login.label}
-                      </Button>
-                    </Link>
-                    <Link to={AUTH_LINKS.signup.path} onClick={handleLinkClick} className="app-navbar__mobile-auth-link">
-                      <Button variant="ghost" size="sm" className="w-full">
-                        {AUTH_LINKS.signup.label}
-                      </Button>
-                    </Link>
-                  </>
-                )
-              )}
-            </div>
-          </nav>
-        </div>
-      )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full app-navbar__mobile-logout-btn"
+                    onClick={async () => {
+                      handleLinkClick()
+                      await logout()
+                    }}
+                  >
+                    Log Out
+                  </Button>
+                </div>
+              ) : (
+                <div className="app-navbar__mobile-guest-actions">
+                  <Link to={AUTH_LINKS.login.path} onClick={handleLinkClick} className="app-navbar__mobile-auth-link">
+                    <Button variant="primary" size="sm" className="w-full">
+                      {AUTH_LINKS.login.label}
+                    </Button>
+                  </Link>
+                  <Link to={AUTH_LINKS.signup.path} onClick={handleLinkClick} className="app-navbar__mobile-auth-link">
+                    <Button variant="ghost" size="sm" className="w-full">
+                      {AUTH_LINKS.signup.label}
+                    </Button>
+                  </Link>
+                </div>
+              )
+            )}
+          </div>
+        </nav>
+      </div>
     </header>
   )
 }

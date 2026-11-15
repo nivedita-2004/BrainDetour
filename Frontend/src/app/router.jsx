@@ -8,6 +8,9 @@ import { BlogPostPage } from '../pages/BlogPostPage'
 import { PresentationPage } from '../pages/PresentationPage'
 import { LoginPage } from '../pages/LoginPage'
 import { SignupPage } from '../pages/SignupPage'
+import { ForgotPasswordPage } from '../pages/ForgotPasswordPage'
+import { VerifyResetOtpPage } from '../pages/VerifyResetOtpPage'
+import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { FaqPage } from '../pages/FaqPage'
 import { ContactPage } from '../pages/ContactPage'
 import { PrivacyPage } from '../pages/PrivacyPage'
@@ -67,6 +70,18 @@ export const router = createBrowserRouter([
       {
         path: 'signup',
         element: <SignupPage />,
+      },
+      {
+        path: 'forgot-password',
+        element: <ForgotPasswordPage />,
+      },
+      {
+        path: 'verify-reset-otp',
+        element: <VerifyResetOtpPage />,
+      },
+      {
+        path: 'reset-password',
+        element: <ResetPasswordPage />,
       },
       {
         path: 'faq',

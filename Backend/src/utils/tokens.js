@@ -3,9 +3,11 @@ const crypto = require('crypto');
 
 const ACCESS_TOKEN_EXPIRY = '7m';
 const REFRESH_TOKEN_EXPIRY = '15d';
+const PASSWORD_RESET_TOKEN_EXPIRY = '10m';
 
 const ACCESS_TOKEN_MAX_AGE = 7 * 60 * 1000; // 7 minutes in ms
 const REFRESH_TOKEN_MAX_AGE = 15 * 24 * 60 * 60 * 1000; // 15 days in ms
+const PASSWORD_RESET_TOKEN_MAX_AGE = 10 * 60 * 1000; // 10 minutes in ms
 
 function getAccessTokenSecret() {
   return process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET;
@@ -39,6 +41,33 @@ function generateRefreshToken(userId) {
     getRefreshTokenSecret(),
     { expiresIn: REFRESH_TOKEN_EXPIRY }
   );
+}
+
+/**
+ * Generate a 10-minute single-use password-reset authorization token.
+ */
+function generatePasswordResetToken(userId) {
+  return jwt.sign(
+    {
+      userId: userId.toString(),
+      tokenType: 'password-reset',
+      purpose: 'password-reset',
+      jti: crypto.randomBytes(16).toString('hex'),
+    },
+    getAccessTokenSecret(),
+    { expiresIn: PASSWORD_RESET_TOKEN_EXPIRY }
+  );
+}
+
+/**
+ * Verify password-reset authorization token signature, expiration, and purpose.
+ */
+function verifyPasswordResetToken(token) {
+  const decoded = jwt.verify(token, getAccessTokenSecret());
+  if (decoded.tokenType !== 'password-reset' || decoded.purpose !== 'password-reset') {
+    throw new Error('Invalid password reset authorization purpose');
+  }
+  return decoded;
 }
 
 /**
@@ -103,9 +132,12 @@ function clearAuthCookies(res) {
 module.exports = {
   generateAccessToken,
   generateRefreshToken,
+  generatePasswordResetToken,
   hashToken,
   verifyAccessToken,
   verifyRefreshToken,
+  verifyPasswordResetToken,
   setAuthCookies,
   clearAuthCookies,
+  PASSWORD_RESET_TOKEN_MAX_AGE,
 };

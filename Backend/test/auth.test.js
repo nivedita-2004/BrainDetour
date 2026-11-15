@@ -229,22 +229,26 @@ describe('BrainDetour Authentication System', () => {
     assert.strictEqual(refreshRes.status, 401);
   });
 
-  test('9. POST /api/auth/forgot-password generates OTP hash with 10min expiry', async () => {
+  test('9. POST /api/auth/forgot-password generates OTP hash with 60s expiry', async () => {
+    const beforeMs = Date.now();
     const res = await fetch(`${baseUrl}/api/auth/forgot-password`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: userEmail }),
     });
+    const afterMs = Date.now();
 
     assert.strictEqual(res.status, 200);
     const data = await res.json();
     assert.strictEqual(data.success, true);
+    assert.strictEqual(data.expiresInSeconds, 60);
 
-    // Check DB for OTP hash and expiry
+    // Check DB for OTP hash and 60-second expiry
     const user = await User.findOne({ email: userEmail.toLowerCase() });
     assert.ok(user.passwordResetOtpHash, 'OTP hash must be set in database');
     assert.ok(user.passwordResetOtpExpiresAt, 'OTP expiry must be set');
-    assert.ok(user.passwordResetOtpExpiresAt.getTime() > Date.now());
+    assert.ok(user.passwordResetOtpExpiresAt.getTime() >= beforeMs + 60 * 1000);
+    assert.ok(user.passwordResetOtpExpiresAt.getTime() <= afterMs + 60 * 1000);
   });
 
   test('10. POST /api/auth/reset-password rejects invalid and expired OTPs', async () => {

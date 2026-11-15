@@ -7,12 +7,21 @@ import './Pages.css'
 
 export function BlogPostPage() {
   const { slug } = useParams()
-  const [post, setPost] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const cachedPost = mockBlogService.getCachedBlogPostBySlug(slug)
+  const [post, setPost] = useState(() => cachedPost)
+  const [loading, setLoading] = useState(() => !cachedPost && mockBlogService.getCachedBlogPosts().length === 0)
+  const [prevSlug, setPrevSlug] = useState(slug)
+
+  if (slug !== prevSlug) {
+    setPrevSlug(slug)
+    setPost(cachedPost)
+    setLoading(!cachedPost && mockBlogService.getCachedBlogPosts().length === 0)
+  }
 
   usePageTitle(post ? post.title : 'Journal Essay')
 
   useEffect(() => {
+    if (cachedPost) return undefined
     let isMounted = true
     mockBlogService.getBlogPostBySlug(slug).then((data) => {
       if (isMounted) {
@@ -23,7 +32,7 @@ export function BlogPostPage() {
     return () => {
       isMounted = false
     }
-  }, [slug])
+  }, [slug, cachedPost])
 
   if (loading) {
     return (

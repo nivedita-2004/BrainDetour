@@ -1655,6 +1655,21 @@
 /* --------------------------------------------------------------------------
    Blog Listing & Article Detail Styles
    -------------------------------------------------------------------------- */
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.blog-page {
+  animation: pageFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .blog-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1787,6 +1802,15 @@
 .blog-post-detail {
   max-width: 760px;
   margin: 0 auto;
+  animation: pageFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blog-page,
+  .blog-post-detail,
+  .info-page {
+    animation: none !important;
+  }
 }
 
 .blog-post-author-bar {
