@@ -224,6 +224,11 @@ async function logout(req, res, next) {
  * GET /api/auth/me
  */
 async function getMe(req, res) {
+  res.set({
+    'Cache-Control': 'no-store, private',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+  });
   return res.status(200).json({
     success: true,
     user: req.user.toSafeObject(),

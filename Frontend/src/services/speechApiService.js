@@ -10,7 +10,7 @@
  * - GET  /api/topics/random
  */
 
-import { fetchWithAuth } from '../context/AuthProvider';
+import { api } from './api';
 
 const API_BASE = '/api';
 
@@ -20,8 +20,8 @@ const API_BASE = '/api';
  */
 export async function ensureScholarAuth() {
   try {
-    const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
-    return res.ok;
+    const res = await api.get('/auth/me');
+    return res.status >= 200 && res.status < 300;
   } catch (err) {
     return false;
   }
@@ -33,16 +33,22 @@ export async function ensureScholarAuth() {
  * @param {string} [category] - Optional category filter (e.g. 'Science', 'Technology', or null/'All')
  */
 export async function fetchRandomSpeechTopic(category = null) {
-  const url =
-    category && category !== 'All'
-      ? `${API_BASE}/topics/random?category=${encodeURIComponent(category)}`
-      : `${API_BASE}/topics/random`;
-  const res = await fetch(url, { credentials: 'include' });
-  const data = await res.json();
-  if (!res.ok || !data.success || !data.topic) {
-    throw new Error(data.message || `Could not fetch a random topic (HTTP ${res.status})`);
+  try {
+    const params = category && category !== 'All' ? { category } : {};
+    const res = await api.get('/topics/random', { params });
+    const data = res.data || {};
+    if (!data.success || !data.topic) {
+      throw new Error(data.message || `Could not fetch a random topic (HTTP ${res.status})`);
+    }
+    return data.topic;
+  } catch (err) {
+    const status = err.response?.status;
+    const msg =
+      err.response?.data?.message ||
+      err.message ||
+      (status ? `Could not fetch a random topic (HTTP ${status})` : 'Could not fetch a random topic');
+    throw new Error(msg);
   }
-  return data.topic;
 }
 
 /**
@@ -52,14 +58,9 @@ export async function fetchRandomSpeechTopic(category = null) {
  */
 export async function fetchActiveTopics(category = null) {
   try {
-    const url =
-      category && category !== 'All'
-        ? `${API_BASE}/topics?category=${encodeURIComponent(category)}`
-        : `${API_BASE}/topics`;
-    const res = await fetch(url, { credentials: 'include' });
-    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
-    const data = await res.json();
-    return data.topics || [];
+    const params = category && category !== 'All' ? { category } : {};
+    const res = await api.get('/topics', { params });
+    return res.data?.topics || [];
   } catch (err) {
     console.warn('Could not fetch topics:', err);
     return [];
@@ -78,20 +79,23 @@ export async function createSpeechSession({ topicId, durationMinutes }) {
     throw new Error('Invalid topicId: A valid topic identifier is required.');
   }
 
-  const res = await fetchWithAuth(`${API_BASE}/speech/sessions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ topicId: topicId.trim(), durationMinutes }),
-  });
-
-  const data = await res.json();
-  if (!res.ok || !data.success) {
-    if (res.status === 401) {
+  try {
+    const res = await api.post('/speech/sessions', {
+      topicId: topicId.trim(),
+      durationMinutes,
+    });
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to initialize speech session');
+    }
+    return data.session;
+  } catch (err) {
+    if (err.response?.status === 401) {
       throw new Error('Authentication required. Please log in to start a speech session.');
     }
-    throw new Error(data.message || 'Failed to initialize speech session');
+    const message = err.response?.data?.message || err.message || 'Failed to initialize speech session';
+    throw new Error(message);
   }
-  return data.session;
 }
 
 /**
@@ -104,41 +108,37 @@ export async function createSpeechSession({ topicId, durationMinutes }) {
  * @param {number} [params.actualDurationSeconds]
  */
 export async function completeSpeechSession({ sessionId, audioBlob, transcript, actualDurationSeconds = 0 }) {
-  let res;
-
-  if (audioBlob) {
-    const formData = new FormData();
-    const mimeType = audioBlob.type || 'audio/webm';
-    const ext = mimeType.includes('wav') ? 'wav' : mimeType.includes('ogg') ? 'ogg' : 'webm';
-    formData.append('audio', audioBlob, `speech-rehearsal.${ext}`);
-    formData.append('actualDurationSeconds', String(actualDurationSeconds));
-    if (transcript) {
-      formData.append('transcript', transcript);
-    }
-
-    res = await fetchWithAuth(`${API_BASE}/speech/sessions/${sessionId}/complete`, {
-      method: 'POST',
-      body: formData,
-    });
-  } else {
-    res = await fetchWithAuth(`${API_BASE}/speech/sessions/${sessionId}/complete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+  try {
+    let res;
+    if (audioBlob) {
+      const formData = new FormData();
+      const mimeType = audioBlob.type || 'audio/webm';
+      const ext = mimeType.includes('wav') ? 'wav' : mimeType.includes('ogg') ? 'ogg' : 'webm';
+      formData.append('audio', audioBlob, `speech-rehearsal.${ext}`);
+      formData.append('actualDurationSeconds', String(actualDurationSeconds));
+      if (transcript) {
+        formData.append('transcript', transcript);
+      }
+      res = await api.post(`/speech/sessions/${sessionId}/complete`, formData);
+    } else {
+      res = await api.post(`/speech/sessions/${sessionId}/complete`, {
         transcript: transcript || '',
         actualDurationSeconds,
-      }),
-    });
-  }
+      });
+    }
 
-  const data = await res.json();
-  if (!res.ok || !data.success) {
-    if (res.status === 401) {
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to complete speech recording');
+    }
+    return data.session;
+  } catch (err) {
+    if (err.response?.status === 401) {
       throw new Error('Authentication required. Please log in.');
     }
-    throw new Error(data.message || 'Failed to complete speech recording');
+    const message = err.response?.data?.message || err.message || 'Failed to complete speech recording';
+    throw new Error(message);
   }
-  return data.session;
 }
 
 /**
@@ -147,13 +147,17 @@ export async function completeSpeechSession({ sessionId, audioBlob, transcript, 
  * @param {string} sessionId
  */
 export async function getSpeechSession(sessionId) {
-  const res = await fetchWithAuth(`${API_BASE}/speech/sessions/${sessionId}`);
-
-  const data = await res.json();
-  if (!res.ok || !data.success) {
-    throw new Error(data.message || 'Failed to retrieve speech session');
+  try {
+    const res = await api.get(`/speech/sessions/${sessionId}`);
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to retrieve speech session');
+    }
+    return data.session;
+  } catch (err) {
+    const message = err.response?.data?.message || err.message || 'Failed to retrieve speech session';
+    throw new Error(message);
   }
-  return data.session;
 }
 
 /**
@@ -192,16 +196,22 @@ export async function pollSpeechSessionUntilComplete(sessionId, onProgress, inte
  * @param {number} [limit=10]
  */
 export async function getSpeechHistory(page = 1, limit = 10) {
-  const res = await fetchWithAuth(`${API_BASE}/speech/history?page=${page}&limit=${limit}`);
-
-  const data = await res.json();
-  if (!res.ok || !data.success) {
-    if (res.status === 401) {
+  try {
+    const res = await api.get('/speech/history', {
+      params: { page, limit },
+    });
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to retrieve speech history');
+    }
+    return data;
+  } catch (err) {
+    if (err.response?.status === 401) {
       throw new Error('Authentication required. Please log in.');
     }
-    throw new Error(data.message || 'Failed to retrieve speech history');
+    const message = err.response?.data?.message || err.message || 'Failed to retrieve speech history';
+    throw new Error(message);
   }
-  return data;
 }
 
 /**
@@ -210,16 +220,18 @@ export async function getSpeechHistory(page = 1, limit = 10) {
  * @param {string} sessionId
  */
 export async function retrySpeechAnalysis(sessionId) {
-  const res = await fetchWithAuth(`${API_BASE}/speech/sessions/${sessionId}/retry-analysis`, {
-    method: 'POST',
-  });
-
-  const data = await res.json();
-  if (!res.ok || !data.success) {
-    if (res.status === 401) {
+  try {
+    const res = await api.post(`/speech/sessions/${sessionId}/retry-analysis`);
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to retry speech analysis');
+    }
+    return data.session;
+  } catch (err) {
+    if (err.response?.status === 401) {
       throw new Error('Authentication required. Please log in.');
     }
-    throw new Error(data.message || 'Failed to retry speech analysis');
+    const message = err.response?.data?.message || err.message || 'Failed to retry speech analysis';
+    throw new Error(message);
   }
-  return data.session;
 }

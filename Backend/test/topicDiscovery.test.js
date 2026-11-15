@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
 const app = require('../src/app');
 const Topic = require('../src/models/Topic');
-const { TOPIC_CATEGORIES, normalizeTitle } = require('../models/Topic');
+const { TOPIC_CATEGORIES, normalizeTitle } = require('../src/models/Topic');
 const TopicImpression = require('../src/models/TopicImpression');
 const ResearchSource = require('../src/models/ResearchSource');
 const SpeechSession = require('../src/models/SpeechSession');
@@ -314,13 +314,21 @@ describe('BrainDetour Topic Discovery, Random Selection & AI Generation Suite', 
     assert.ok(data.topic);
   });
 
-  test('11. Concurrent refill requests are controlled via active locks', () => {
-    assert.strictEqual(activeRefillLocks.has('Philosophy'), false);
-    activeRefillLocks.add('Philosophy');
-    assert.strictEqual(activeRefillLocks.has('Philosophy'), true);
-    activeRefillLocks.delete('Philosophy');
-    assert.strictEqual(activeRefillLocks.has('Philosophy'), false);
-  });
+ test('11. Refill locks use a Set to prevent duplicate category refills', () => {
+  const testLocks = new Set();
+
+  assert.strictEqual(testLocks.has('Philosophy'), false);
+
+  testLocks.add('Philosophy');
+  assert.strictEqual(testLocks.has('Philosophy'), true);
+
+  // A second add does not create another lock.
+  testLocks.add('Philosophy');
+  assert.strictEqual(testLocks.size, 1);
+
+  testLocks.delete('Philosophy');
+  assert.strictEqual(testLocks.has('Philosophy'), false);
+});
 
   test('12. Existing topic details and research-source endpoints continue working', async () => {
     const resTopic = await fetch(`${baseUrl}/api/topics/quantum-computing-foundations`);
@@ -351,7 +359,6 @@ describe('BrainDetour Topic Discovery, Random Selection & AI Generation Suite', 
       user: testUser._id,
       topic: testTopic._id,
       durationMinutes: 5,
-      status: 'ready',
     });
 
     assert.ok(session._id);

@@ -7,6 +7,7 @@ import { CuriosityPrompt } from '../features/learning/CuriosityPrompt'
 import { ReflectionForm } from '../features/learning/ReflectionForm'
 import { Button } from '../components/ui/Button'
 import { formatMinutes } from '../lib/utils'
+import { api } from '../services/api'
 import './Pages.css'
 
 export function TopicPage() {
@@ -49,18 +50,16 @@ export function TopicPage() {
       }
 
       try {
-        const res = await fetch(`/api/topics/${encodeURIComponent(topicId)}`)
-        if (res.ok) {
-          const data = await res.json()
-          if (data.success && data.topic && isMounted) {
-            setTopic((prev) => ({
-              ...(prev || {}),
-              ...data.topic,
-              _id: data.topic._id || data.topic.id,
-              id: data.topic.id || data.topic._id,
-            }))
-            setLoading(false)
-          }
+        const res = await api.get(`/topics/${encodeURIComponent(topicId)}`)
+        const data = res.data
+        if (data?.success && data?.topic && isMounted) {
+          setTopic((prev) => ({
+            ...(prev || {}),
+            ...data.topic,
+            _id: data.topic._id || data.topic.id,
+            id: data.topic.id || data.topic._id,
+          }))
+          setLoading(false)
         }
       } catch (_) {
         // Fall back cleanly to mock data if backend topic lookup is unreachable

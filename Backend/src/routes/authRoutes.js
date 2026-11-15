@@ -13,6 +13,18 @@ const { loginLimiter, passwordResetLimiter } = require('../middleware/rateLimite
 
 const router = express.Router();
 
+// Anti-caching protection for authentication endpoints:
+// Ensures private user sessions, tokens, and identity responses are never cached by
+// intermediate proxies (e.g. Vercel, Render), browsers, or in-app WebViews (e.g. WhatsApp)
+router.use((req, res, next) => {
+  res.set({
+    'Cache-Control': 'no-store, private',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+  });
+  next();
+});
+
 router.post('/signup', signup);
 router.post('/login', loginLimiter, login);
 router.post('/refresh', refresh);

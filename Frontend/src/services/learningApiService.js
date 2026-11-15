@@ -1,7 +1,7 @@
 /**
  * Learning Session & Reflection API Service
  * 
- * Interacts directly with BrainDetour backend learning endpoints:
+ * Interacts directly with BrainDetour backend learning endpoints via centralized Axios client:
  * - GET   /api/learning/sessions/by-topic/:topicId
  * - POST  /api/learning/sessions
  * - PATCH /api/learning/sessions/:id/reflection
@@ -9,7 +9,9 @@
  * - GET   /api/learning/history
  */
 
-const API_BASE = '/api/learning';
+import { api } from './api';
+
+const LEARNING_BASE = '/api/learning';
 
 /**
  * Retrieves the user's most recent learning session for a given topic.
@@ -19,16 +21,10 @@ const API_BASE = '/api/learning';
 export async function fetchTopicLearningSession(topicId) {
   if (!topicId) return null;
   try {
-    const res = await fetch(`${API_BASE}/sessions/by-topic/${encodeURIComponent(topicId)}`, {
-      credentials: 'include',
-    });
-    if (!res.ok) {
-      if (res.status === 401 || res.status === 404) return null;
-      throw new Error(`Failed to load learning session (HTTP ${res.status})`);
-    }
-    const data = await res.json();
-    return data.session || null;
+    const res = await api.get(`${LEARNING_BASE}/sessions/by-topic/${encodeURIComponent(topicId)}`);
+    return res.data?.session || null;
   } catch (err) {
+    if (err.response?.status === 401 || err.response?.status === 404) return null;
     console.warn('Could not fetch topic learning session:', err);
     return null;
   }
@@ -42,22 +38,20 @@ export async function fetchTopicLearningSession(topicId) {
 export async function startOrResumeLearningSession(topicId) {
   if (!topicId) throw new Error('topicId is required to start a learning session');
 
-  const res = await fetch(`${API_BASE}/sessions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ topicId }),
-  });
-
-  const data = await res.json();
-  if (!res.ok || !data.success) {
-    if (res.status === 401) {
+  try {
+    const res = await api.post(`${LEARNING_BASE}/sessions`, { topicId });
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to start learning session');
+    }
+    return data.session;
+  } catch (err) {
+    if (err.response?.status === 401) {
       throw new Error('Authentication required. Please log in to record your reflections.');
     }
-    throw new Error(data.message || 'Failed to start learning session');
+    const message = err.response?.data?.message || err.message || 'Failed to start learning session';
+    throw new Error(message);
   }
-
-  return data.session;
 }
 
 /**
@@ -69,22 +63,20 @@ export async function startOrResumeLearningSession(topicId) {
 export async function saveSessionReflection(sessionId, reflectionFields) {
   if (!sessionId) throw new Error('sessionId is required to update reflection');
 
-  const res = await fetch(`${API_BASE}/sessions/${sessionId}/reflection`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(reflectionFields),
-  });
-
-  const data = await res.json();
-  if (!res.ok || !data.success) {
-    if (res.status === 401) {
+  try {
+    const res = await api.patch(`${LEARNING_BASE}/sessions/${sessionId}/reflection`, reflectionFields);
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to save reflection to your learning session');
+    }
+    return data.session;
+  } catch (err) {
+    if (err.response?.status === 401) {
       throw new Error('Authentication required. Please log in to save your reflection.');
     }
-    throw new Error(data.message || 'Failed to save reflection to your learning session');
+    const message = err.response?.data?.message || err.message || 'Failed to save reflection to your learning session';
+    throw new Error(message);
   }
-
-  return data.session;
 }
 
 /**
@@ -96,18 +88,15 @@ export async function saveSessionReflection(sessionId, reflectionFields) {
 export async function completeLearningSession(sessionId, durationSeconds = 0) {
   if (!sessionId) throw new Error('sessionId is required to complete session');
 
-  const res = await fetch(`${API_BASE}/sessions/${sessionId}/complete`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ durationSeconds }),
-  });
-
-  const data = await res.json();
-  if (!res.ok || !data.success) {
-    throw new Error(data.message || 'Failed to complete learning session');
+  try {
+    const res = await api.patch(`${LEARNING_BASE}/sessions/${sessionId}/complete`, { durationSeconds });
+    const data = res.data || {};
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to complete learning session');
+    }
+    return data.session;
+  } catch (err) {
+    const message = err.response?.data?.message || err.message || 'Failed to complete learning session';
+    throw new Error(message);
   }
-
-  return data.session;
 }
-

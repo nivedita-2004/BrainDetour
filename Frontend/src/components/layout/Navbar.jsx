@@ -7,13 +7,10 @@ import { useAuth } from '../../hooks/useAuth'
 import { ProfileMenu } from './ProfileMenu'
 import { Button } from '../ui/Button'
 
-/**
- * Shared application navigation header with floating claymorphic bar,
- * accessible theme mode toggle, scholar profile menu, and responsive mobile drawer.
- */
+
 export function Navbar() {
   const { theme, toggleTheme } = useTheme()
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated, loading, logout } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLinkClick = () => {
@@ -77,14 +74,16 @@ export function Navbar() {
           </button>
 
           <div className="app-navbar__auth-desktop">
-            {isAuthenticated ? (
-              <ProfileMenu />
-            ) : (
-              <Link to={AUTH_LINKS.login.path}>
-                <Button variant="primary" size="sm">
-                  {AUTH_LINKS.login.label}
-                </Button>
-              </Link>
+            {!loading && (
+              isAuthenticated ? (
+                <ProfileMenu />
+              ) : (
+                <Link to={AUTH_LINKS.login.path}>
+                  <Button variant="primary" size="sm">
+                    {AUTH_LINKS.login.label}
+                  </Button>
+                </Link>
+              )
             )}
           </div>
 
@@ -122,36 +121,38 @@ export function Navbar() {
             ))}
             <div className="app-navbar__mobile-divider" />
             <div className="app-navbar__mobile-auth">
-              {isAuthenticated ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ padding: '6px 12px', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
-                    Signed in as <strong>{user?.name || user?.email}</strong>
+              {!loading && (
+                isAuthenticated ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ padding: '6px 12px', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+                      Signed in as <strong>{user?.name || user?.email}</strong>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={async () => {
+                        handleLinkClick()
+                        await logout()
+                      }}
+                    >
+                      Log Out
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full"
-                    onClick={async () => {
-                      handleLinkClick()
-                      await logout()
-                    }}
-                  >
-                    Log Out
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <Link to={AUTH_LINKS.login.path} onClick={handleLinkClick} className="app-navbar__mobile-auth-link">
-                    <Button variant="primary" size="sm" className="w-full">
-                      {AUTH_LINKS.login.label}
-                    </Button>
-                  </Link>
-                  <Link to={AUTH_LINKS.signup.path} onClick={handleLinkClick} className="app-navbar__mobile-auth-link">
-                    <Button variant="ghost" size="sm" className="w-full">
-                      {AUTH_LINKS.signup.label}
-                    </Button>
-                  </Link>
-                </>
+                ) : (
+                  <>
+                    <Link to={AUTH_LINKS.login.path} onClick={handleLinkClick} className="app-navbar__mobile-auth-link">
+                      <Button variant="primary" size="sm" className="w-full">
+                        {AUTH_LINKS.login.label}
+                      </Button>
+                    </Link>
+                    <Link to={AUTH_LINKS.signup.path} onClick={handleLinkClick} className="app-navbar__mobile-auth-link">
+                      <Button variant="ghost" size="sm" className="w-full">
+                        {AUTH_LINKS.signup.label}
+                      </Button>
+                    </Link>
+                  </>
+                )
               )}
             </div>
           </nav>
