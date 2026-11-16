@@ -81,6 +81,19 @@ export async function refreshAccessToken() {
 }
 
 
+export function isAuthEndpoint(url = '') {
+  if (!url || typeof url !== 'string') return false;
+  return (
+    url.includes('/auth/login') ||
+    url.includes('/auth/signup') ||
+    url.includes('/auth/refresh') ||
+    url.includes('/auth/logout') ||
+    url.includes('/auth/forgot-password') ||
+    url.includes('/auth/verify-reset-otp') ||
+    url.includes('/auth/reset-password')
+  );
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -91,14 +104,7 @@ api.interceptors.response.use(
     }
 
     const url = originalRequest.url || '';
-    const isAuthEndpoint =
-      url.includes('/auth/login') ||
-      url.includes('/auth/signup') ||
-      url.includes('/auth/refresh') ||
-      url.includes('/auth/forgot-password') ||
-      url.includes('/auth/verify-reset-otp') ||
-      url.includes('/auth/reset-password');
-    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint(url)) {
       originalRequest._retry = true;
       try {
         await refreshAccessToken();

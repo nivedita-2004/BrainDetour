@@ -32,6 +32,7 @@ before(async () => {
   process.env.JWT_SECRET = 'test_access_token_secret_minimum_32_characters';
 
   // Configure valid test SMTP environment variables for mocked transporter
+  process.env.EMAIL_PROVIDER = 'smtp';
   process.env.EMAIL_HOST = 'smtp.gmail.com';
   process.env.EMAIL_PORT = '587';
   process.env.EMAIL_USER = 'mailer.service@gmail.com';

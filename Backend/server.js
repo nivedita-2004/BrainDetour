@@ -5,6 +5,15 @@ const path = require('path');
 const envPath = path.join(__dirname, '.env');
 dotenv.config({ path: envPath });
 
+// Normalize CLIENT_ORIGIN by stripping any trailing slashes so configured origins match browser Origin headers
+if (process.env.CLIENT_ORIGIN && typeof process.env.CLIENT_ORIGIN === 'string') {
+  process.env.CLIENT_ORIGIN = process.env.CLIENT_ORIGIN
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean)
+    .join(',');
+}
+
 // If started with a local override file (e.g. .env.local) that sets dummy @braindetour.local
 // SMTP placeholders, fall back to the real EMAIL_* configuration in Backend/.env when present.
 if (
@@ -19,6 +28,8 @@ if (
       !parsedEnv.EMAIL_USER.trim().toLowerCase().endsWith('@braindetour.local')
     ) {
       for (const key of [
+        'EMAIL_PROVIDER',
+        'RESEND_API_KEY',
         'EMAIL_HOST',
         'EMAIL_PORT',
         'EMAIL_SECURE',

@@ -29,6 +29,7 @@ function getCookies(res) {
 
 before(async () => {
   process.env.NODE_ENV = 'test';
+  process.env.EMAIL_PROVIDER = 'smtp';
   process.env.ACCESS_TOKEN_SECRET = 'test_access_token_secret_minimum_16_chars';
   process.env.REFRESH_TOKEN_SECRET = 'test_refresh_token_secret_minimum_16_chars';
 

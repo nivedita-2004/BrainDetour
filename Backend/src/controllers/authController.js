@@ -259,6 +259,74 @@ async function getMe(req, res) {
 }
 
 /**
+ * Produces a validated, sanitized diagnostic for password-reset operations (database or email).
+ * Never blindly trusts pre-populated error.safeDiagnostic objects and redacts all sensitive values
+ * (API keys, SMTP passwords, database URIs, email addresses, OTPs, reset tokens, and cookies).
+ *
+ * @param {any} error
+ * @param {string} [defaultOperation='FORGOT_PASSWORD']
+ */
+function sanitizeResetOperationError(error, defaultOperation = 'FORGOT_PASSWORD') {
+  const redact =
+    typeof mailer.redactSensitiveText === 'function'
+      ? mailer.redactSensitiveText
+      : (v) => String(v || '');
+
+  const source =
+    error && typeof error === 'object'
+      ? error.safeDiagnostic && typeof error.safeDiagnostic === 'object'
+        ? { ...error, ...error.safeDiagnostic }
+        : error
+      : { message: String(error || 'Unexpected password reset operation error') };
+
+  const errName = String(error?.name || source.name || '');
+  const rawCode = String(source.code || errName || 'RESET_OPERATION_ERROR');
+  const rawOperation = String(source.operation || source.command || defaultOperation);
+  const rawMessage = String(source.message || 'Unexpected password reset operation error');
+
+  const sanitizedCode = redact(rawCode) || 'RESET_OPERATION_ERROR';
+  const sanitizedOperation = redact(rawOperation) || defaultOperation;
+  const sanitizedMessage = redact(rawMessage);
+
+  let category = 'INTERNAL_RESET_ERROR';
+  if (errName === 'ValidationError' || errName === 'CastError') {
+    category = 'MONGODB_VALIDATION_ERROR';
+  } else if (
+    errName.includes('MongoServerSelection') ||
+    errName.includes('MongoNetwork') ||
+    rawCode === 'ECONNREFUSED' && rawOperation.startsWith('DB_')
+  ) {
+    category = 'MONGODB_CONNECTION_ERROR';
+  } else if (
+    errName.startsWith('Mongo') ||
+    errName.startsWith('Mongoose') ||
+    rawOperation.startsWith('DB_')
+  ) {
+    category = 'MONGODB_QUERY_ERROR';
+  } else if (typeof mailer.classifyMailErrorCategory === 'function') {
+    category = mailer.classifyMailErrorCategory({
+      code: sanitizedCode,
+      responseCode: source.responseCode ?? source.statusCode,
+      message: rawMessage,
+      category: source.category,
+    });
+  }
+
+  const config = typeof mailer.getEmailConfig === 'function' ? mailer.getEmailConfig() : null;
+  const rawProvider = String(source.provider || config?.provider || 'unconfigured').toLowerCase();
+  const provider =
+    rawProvider === 'resend' || rawProvider === 'smtp' ? rawProvider : 'unconfigured';
+
+  return {
+    provider,
+    code: sanitizedCode,
+    operation: sanitizedOperation,
+    category,
+    message: sanitizedMessage,
+  };
+}
+
+/**
  * POST /api/auth/forgot-password
  */
 async function forgotPassword(req, res, next) {
@@ -280,7 +348,18 @@ async function forgotPassword(req, res, next) {
       });
     }
 
-    const user = await User.findOne({ email: normalizedEmail });
+    let user;
+    try {
+      user = await User.findOne({ email: normalizedEmail });
+    } catch (dbFindError) {
+      dbFindError.operation = 'DB_FIND_USER';
+      const dbDiagnostic = sanitizeResetOperationError(dbFindError, 'DB_FIND_USER');
+      dbFindError.safeDiagnostic = dbDiagnostic;
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('[Auth] Forgot password DB lookup failed:', dbDiagnostic);
+      }
+      throw dbFindError;
+    }
 
     const buildGenericSuccessResponse = (expiresAtDate) => ({
       success: true,
@@ -315,48 +394,106 @@ async function forgotPassword(req, res, next) {
     const otpExpiresAt = new Date(issuedAt + PASSWORD_RESET_OTP_LIFETIME_MS); // Exactly 60 seconds (60,000 ms)
 
     // Store hashed OTP, purpose, expiry, reset attempts, and invalidate any earlier OTP or reset token
-    user.passwordResetOtpHash = otpHash;
-    user.passwordResetOtpExpiresAt = otpExpiresAt;
-    user.passwordResetPurpose = 'password-reset';
-    user.passwordResetAttempts = 0;
-    user.passwordResetLastSentAt = new Date(issuedAt);
-    user.passwordResetTokenHash = null;
-    user.passwordResetTokenExpiresAt = null;
-    await user.save();
+    const resetStateUpdate = {
+      passwordResetOtpHash: otpHash,
+      passwordResetOtpExpiresAt: otpExpiresAt,
+      passwordResetPurpose: 'password-reset',
+      passwordResetAttempts: 0,
+      passwordResetLastSentAt: new Date(issuedAt),
+      passwordResetTokenHash: null,
+      passwordResetTokenExpiresAt: null,
+    };
+
+    Object.assign(user, resetStateUpdate);
+
+    try {
+      if (user instanceof User && typeof User.updateOne === 'function') {
+        await User.updateOne(
+          { _id: user._id },
+          { $set: resetStateUpdate },
+          { runValidators: true }
+        );
+      } else if (typeof user.save === 'function') {
+        await user.save();
+      }
+    } catch (dbSaveError) {
+      dbSaveError.operation = 'DB_SAVE_OTP';
+      const dbDiagnostic = sanitizeResetOperationError(dbSaveError, 'DB_SAVE_OTP');
+      dbSaveError.safeDiagnostic = dbDiagnostic;
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('[Auth] Forgot password OTP save failed:', dbDiagnostic);
+      }
+      throw dbSaveError;
+    }
 
     try {
       await mailer.sendPasswordResetEmail(user.email, otp);
     } catch (mailError) {
       const safeDiagnostic =
-        mailError?.safeDiagnostic ||
-        (typeof mailer.sanitizeMailError === 'function'
+        typeof mailer.sanitizeMailError === 'function'
           ? mailer.sanitizeMailError(mailError, 'FORGOT_PASSWORD_SEND')
-          : {
-              code: mailError?.code || 'EMAIL_DELIVERY_ERROR',
-              operation: mailError?.command || 'SMTP_SEND',
-              responseCode: mailError?.responseCode || null,
-            });
+          : sanitizeResetOperationError(mailError, 'FORGOT_PASSWORD_SEND');
 
       if (process.env.NODE_ENV !== 'test') {
         console.error('[Auth] Forgot password email delivery failed:', safeDiagnostic);
       }
 
-      // Clear OTP state on email delivery failure so an undelivered OTP cannot be used
-      user.passwordResetOtpHash = null;
-      user.passwordResetOtpExpiresAt = null;
-      user.passwordResetPurpose = null;
-      user.passwordResetAttempts = 0;
-      user.passwordResetLastSentAt = null;
-      await user.save();
+      // Clean up ONLY the newly created OTP state matching otpHash so another valid OTP or reset session is never deleted
+      try {
+        const cleanupFields = {
+          passwordResetOtpHash: null,
+          passwordResetOtpExpiresAt: null,
+          passwordResetPurpose: null,
+          passwordResetAttempts: 0,
+          passwordResetLastSentAt: null,
+        };
+
+        if (user instanceof User && typeof User.updateOne === 'function') {
+          await User.updateOne(
+            {
+              _id: user._id,
+              passwordResetOtpHash: otpHash,
+            },
+            { $set: cleanupFields },
+            { runValidators: true }
+          );
+          if (user.passwordResetOtpHash === otpHash) {
+            Object.assign(user, cleanupFields);
+          }
+        } else if (user.passwordResetOtpHash === otpHash) {
+          Object.assign(user, cleanupFields);
+          if (typeof user.save === 'function') {
+            await user.save();
+          }
+        }
+      } catch (rollbackError) {
+        if (process.env.NODE_ENV !== 'test') {
+          console.error(
+            '[Auth] Forgot password OTP rollback failed:',
+            sanitizeResetOperationError(rollbackError, 'DB_ROLLBACK_OTP')
+          );
+        }
+      }
 
       return res.status(500).json({
         success: false,
         message: 'Failed to send verification email. Please try again later.',
+        error: {
+          provider: safeDiagnostic.provider || 'unconfigured',
+          code: safeDiagnostic.code || 'EMAIL_DELIVERY_ERROR',
+          operation: safeDiagnostic.operation || 'EMAIL_SEND',
+          category: safeDiagnostic.category || 'EMAIL_DELIVERY_ERROR',
+        },
       });
     }
 
     return res.status(200).json(buildGenericSuccessResponse(otpExpiresAt));
   } catch (error) {
+    const safeDiagnostic = sanitizeResetOperationError(error, 'FORGOT_PASSWORD');
+    error.safeDiagnostic = safeDiagnostic;
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('[Auth] Unhandled forgotPassword error:', safeDiagnostic);
+    }
     next(error);
   }
 }
@@ -671,6 +808,7 @@ module.exports = {
   forgotPassword,
   verifyResetOtp,
   resetPassword,
+  sanitizeResetOperationError,
   PASSWORD_RESET_OTP_LIFETIME_MS,
   PASSWORD_RESET_OTP_LIFETIME_SECONDS,
 };

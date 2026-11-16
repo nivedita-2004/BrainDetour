@@ -289,4 +289,16 @@ describe('Phase 4: Frontend Authentication State & Sequencing Logic', () => {
     assert.ok(navbarCss.includes('min-height: 44px'), 'Mobile navigation links must have >= 44px touch targets');
     assert.ok(navbarCss.includes('.app-navbar__mobile-link--active'), 'Mobile navigation must highlight the active route');
   });
+
+  // 12. Public password-reset endpoints are excluded from 401 token refresh interceptor
+  test('Axios response interceptor isAuthEndpoint excludes public password-reset and auth routes from refresh retries', () => {
+    const apiJsPath = path.join(__dirname, '..', '..', 'Frontend', 'src', 'services', 'api.js');
+    const apiJs = fs.readFileSync(apiJsPath, 'utf8');
+
+    assert.ok(apiJs.includes('export function isAuthEndpoint'), 'api.js must export isAuthEndpoint helper');
+    assert.ok(apiJs.includes("url.includes('/auth/forgot-password')"), 'forgot-password must be excluded from 401 refresh retry');
+    assert.ok(apiJs.includes("url.includes('/auth/verify-reset-otp')"), 'verify-reset-otp must be excluded from 401 refresh retry');
+    assert.ok(apiJs.includes("url.includes('/auth/reset-password')"), 'reset-password must be excluded from 401 refresh retry');
+    assert.ok(apiJs.includes("url.includes('/auth/logout')"), 'logout must be excluded from 401 refresh retry');
+  });
 });
